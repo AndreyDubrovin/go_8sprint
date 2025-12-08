@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -31,45 +32,66 @@ func getTestParcel() Parcel {
 // TestAddGetDelete проверяет добавление, получение и удаление посылки
 func TestAddGetDelete(t *testing.T) {
 	// prepare
-	    db, err := sql.Open("sqlite", "tracker.db") // настройте подключение к БД
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
-    defer db.Close()
+	db, err := sql.Open("sqlite", "tracker.db") // настройте подключение к БД
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer db.Close()
 	store := NewParcelStore(db)
 	parcel := getTestParcel()
 
 	// add
 	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
-
+	id, err := store.Add(parcel)
+	require.NoError(t, err)
+	require.NotEmpty(t, id)
 	// get
 	// получите только что добавленную посылку, убедитесь в отсутствии ошибки
 	// проверьте, что значения всех полей в полученном объекте совпадают со значениями полей в переменной parcel
-
+	percelFind, err := store.Get(id)
+	require.NoError(t, err)
+	require.Equal(t, percelFind.Number, id)
+	require.Equal(t, percelFind.Client, parcel.Client)
+	require.Equal(t, percelFind.Status, parcel.Status)
+	require.Equal(t, percelFind.Address, parcel.Address)
+	require.Equal(t, percelFind.CreatedAt, parcel.CreatedAt)
 	// delete
 	// удалите добавленную посылку, убедитесь в отсутствии ошибки
 	// проверьте, что посылку больше нельзя получить из БД
+	err = store.Delete(percelFind.Number)
+	require.NoError(t, err)
+	parcelNoFound, err := store.Get(percelFind.Number)
+	require.NoError(t, err)
+	require.Equal(t, Parcel{}, parcelNoFound)
 }
 
 // TestSetAddress проверяет обновление адреса
 func TestSetAddress(t *testing.T) {
 	// prepare
-	    db, err := sql.Open("sqlite", "tracker.db") // настройте подключение к БД
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
-    defer db.Close()
+	db, err := sql.Open("sqlite", "tracker.db") // настройте подключение к БД
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer db.Close()
+	store := NewParcelStore(db)
+	parcel := getTestParcel()
 	// add
 	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
-
+	id, err := store.Add(parcel)
+	require.NoError(t, err)
+	require.NotEmpty(t, id)
 	// set address
 	// обновите адрес, убедитесь в отсутствии ошибки
 	newAddress := "new test address"
-
+	err = store.SetAddress(id, newAddress)
+	require.NoError(t, err)
 	// check
 	// получите добавленную посылку и убедитесь, что адрес обновился
+	percelFind, err := store.Get(id)
+	require.NoError(t, err)
+	require.Equal(t, percelFind.Address, newAddress)
 }
 
 // TestSetStatus проверяет обновление статуса
@@ -100,7 +122,7 @@ func TestGetByClient(t *testing.T) {
         return
     }
     defer db.Close()
-	
+
 	parcels := []Parcel{
 		getTestParcel(),
 		getTestParcel(),

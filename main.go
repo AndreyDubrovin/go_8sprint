@@ -72,7 +72,6 @@ func (s ParcelService) NextStatus(number int) error {
 	if err != nil {
 		return err
 	}
-
 	var nextStatus string
 	switch parcel.Status {
 	case ParcelStatusRegistered:
@@ -139,6 +138,7 @@ func main() {
 	}
 
 	// попытка удаления отправленной посылки
+	fmt.Println("Попытка удаления отправленной посылки, что вызовет ошибку")
 	err = service.Delete(p.Number)
 	if err != nil {
 		fmt.Println(err)
@@ -147,6 +147,7 @@ func main() {
 
 	// вывод посылок клиента
 	// предыдущая посылка не должна удалиться, т.к. её статус НЕ «зарегистрирована»
+	fmt.Println("Повторный вызов принта")
 	err = service.PrintClientParcels(client)
 	if err != nil {
 		fmt.Println(err)
@@ -174,4 +175,5 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+	fmt.Println("Код окончен")
 }
