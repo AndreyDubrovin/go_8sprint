@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 )
 
 type ParcelStore struct {
@@ -15,8 +16,22 @@ func NewParcelStore(db *sql.DB) ParcelStore {
 func (s ParcelStore) Add(p Parcel) (int, error) {
 	// реализуйте добавление строки в таблицу parcel, используйте данные из переменной p
 
+	result, err := s.db.Exec("INSERT INTO parcel (client, status, address, created_at) VALUES (:client, :status, :address, :created_at)",
+		sql.Named("client", p.Client),
+		sql.Named("status", p.Status),
+		sql.Named("address", p.Address),
+		sql.Named("created_at", p.CreatedAt))
+	if err != nil {
+		return 0, fmt.Errorf("failed to add parcel: %v", err)
+
+	}
 	// верните идентификатор последней добавленной записи
-	return 0, nil
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get LastInsertId: %v", err)
+	}
+
+	return int(id), nil
 }
 
 func (s ParcelStore) Get(number int) (Parcel, error) {
@@ -32,10 +47,24 @@ func (s ParcelStore) Get(number int) (Parcel, error) {
 func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 	// реализуйте чтение строк из таблицы parcel по заданному client
 	// здесь из таблицы может вернуться несколько строк
+	rows, err := s.db.Query("SELECT number, client, status, address, created_at FROM parcel WHERE client = :client", sql.Named("client", client))
+	if err != nil {
+		return nil, fmt.Errorf("failed to GetByClient from db: %v", err)
+	}
+	defer rows.Close()
 
-	// заполните срез Parcel данными из таблицы
 	var res []Parcel
-
+	for rows.Next() {
+		parcel := Parcel{}
+		err := rows.Scan(&parcel.Number, &parcel.Client, &parcel.Status, &parcel.Address, &parcel.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan rows: %v", err)
+		}
+		res = append(res, parcel)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to rows Next: %v", err)
+	}
 	return res, nil
 }
 
